@@ -1,0 +1,414 @@
+FomoSport Smart Contract Document
+---------------------------------
+
+
+SET UP
+------
+
+Take these procedures to set up a FomoSport contract:
+
+1. Check "TODO: Check address" in FomoSport.sol to make sure all contract addresses are correct.
+2. Deploy FomoSport contract.
+3. Register the contract address with FSBook smart contract.
+
+
+
+CREATE GAME
+-----------
+
+Only owner address in "isOwner" modifier can create game.
+
+Call "createGame" function to create a new game.
+
+Parameters:
+
+ - string _name: Name of the new game
+ - bytes32[] _teamNames: Names of the teams
+
+The _teamNames array should have the size the same as the number of all teams.
+The function returns gameID of the newly created game.
+Also a "onGameCreated" event is emitted.
+
+After creating a game, it needs to be activated.
+
+Call "activate" function to activate a game.
+
+Parameters:
+
+ - uint256 _gameID: gameID of the game to be activated
+ - uint256 _startTime: timestamp of the start time of the game (in seconds)
+
+
+CONTRACT STATUS
+---------------
+
+
+Global status
+-------------
+gameIDIndex_ returns uint256
+
+If a gameID is equals to or larger than this number, means the gameID is not valid.
+
+
+Get game data
+-------------
+game_(uint256 _gameID) returns Game
+
+Game:
+ 0: string name - name of the game
+ 1: uint256 numberOfTeams - number of teams
+ 2: uint256 gameStartTime - timestamp of the start time of the game. if 0, the game is not activated yet.
+ 3: bool paused - true if the game is currently paused (can't buy key now), false if not
+ 4: bool ended - true if the game is ended (settled or canceled), false if not
+ 5: bool canceled - true if the game is canceled
+ 6: uint256 winnerTeam - index of the winner team, only valid if the game is ended and not canceled
+ 7: uint256 withdrawDeadline - timestamp of the withdraw deadline, only valid if the game is ended
+ 8: uint256 gameEndComment - ending comment of a game (assigned when settling or canceling a game)
+ 9: uint256 closeTime - timestamp of planned betting close time, 0 if no closing time
+
+Get game status
+---------------
+gameStatus_(uint256 _gameID) returns GameStatus
+
+GameStatus:
+ 0: uint256 totalEth - total ETH spent on this game
+ 1: uint256 totalWithdrawn - total ETH withdrawn from this game
+ 2: uint256 winningVaultInst - total ETH allocated to instant pot
+ 3: uint256 winningVaultFinal - total ETH allocated to final pot
+ 4: bool fundCleared - true if the game is past withdraw deadline and the owner cleared the fund
+
+
+Team status
+-----------
+teams_(uint256 _gameID, uint256 _teamID) returns Team
+
+Team:
+ 0: bytes32 name - name of the team
+ 1: uint256 keys - total keys invested in this team
+ 2: uint256 eth - total ETH invested in this team
+ 3: uint256 mask - mask of this team (internal use)
+ 4: uint256 dust - dust of this team (internal use)
+
+
+Game status in one go
+---------------------
+getGameStatus(uint256 _gameID) returns (uint256, bytes32[], uint256[], uint256[], uint256[])
+
+get status of all teams in one go (faster than reading contract for each team)
+
+returns:
+ 0: uint256 numberOfTeams - number of teams
+ 1: bytes32[] teamNames - names of the teams
+ 2: uint256[] keys - number of keys in each team
+ 3: uint256[] eth - amount of ETH in each team
+ 4: uint256[] keyPrice - price of one key in each team
+
+
+Player global status (REMOVED)
+------------------------------
+playerGlobal_(uint256 _playerID) returns PlayerGlobal
+
+PlayerGlobal:
+ 0: address addr - wallet address of this player
+ 1: uint256 laff - last affiliate ID used by this player
+
+REMOVED:
+Use FSBook.getPlayerAddr to get player address.
+Use FSBook.getPlayerLAff to get last affiliate ID used by this player.
+
+
+Player status
+-------------
+players_(uint256 _playerID, uint256 _gameID) returns Player
+
+Player:
+ 0: uint256 eth - total ETH invested in this game by this player
+ 1: bool withdrawn - true if the player has already withdrawn the winnings
+
+
+Player team status
+------------------
+playerTeams_(uint256 _playerID, uint256 _gameID, uint256 _teamID) returns PlayerTeam
+
+PlayerTeam:
+ 0: uint256 keys - total keys invested in this team by this player in this game
+ 1: uint256 eth - total ETH invested in this team by this player in this game
+ 2: uint256 mask - mask of this team (internal use)
+
+
+Player Status in one go
+-----------------------
+getPlayerStatus(uint256 _gameID, uint256 _playerID) returns (bytes32, uint256[], uint256[], uint256[], uint256[])
+
+returns player status of each team in one go.
+
+Returns:
+ 0: byte32 name - name of the player
+ 1: uint256[] eth - amount of ETH invested in each team by this player
+ 2: uint256[] keys - number of keys invested in each team by this player
+ 3: uint256[] instWin - instant pot from each team for this player
+ 4: uint256[] finalWin - final pot from each team for this player
+
+
+Player comments
+---------------
+playerCommentsIndex_(uint256 _gameID) returns uint256
+
+returns the index of the latest player comment in this game.
+
+playerComments_(uint256 _gameID, uint256 _commentID) returns PlayerComment
+
+PlayerComment:
+ 0: uint256 playerID - playerID of the player who made this comment
+ 1: bytes32 playerName - name of the player who made this comment
+ 2: uint256 ethIn - the amount of ETH invested when the player made this comment
+ 3: string comment - the comment
+
+
+Player Instant Pot
+------------------
+getPlayerInstWinning(uint256 _gameID, uint256 _playerID, uint256 _teamID) returns uint256
+
+returns current instant pot.
+
+
+Player Final Pot
+----------------
+getPlayerPotWinning(uint256 _gameID, uint256 _playerID, uint256 _teamID) returns uint256
+
+returns current final pot winning.
+
+
+INTERACT WITH THE GAME
+----------------------
+
+Buy keys
+--------
+buysXid(uint256 _gameID, uint256[] _teamEth, uint256 _affCode, string _comment)
+
+ _gameID: game ID
+ _teamEth: amount of ETH to buy keys for each team, must be the same size as the number of teams
+ _affCode: affiliate code to be used in this transaction (0 for no affiliate code)
+ _comment: player comment for this transaction (only effective when total amount of ETH is > 0.001)
+
+The amount of ETH sent along with this transaction must be the same as the sum of all numbers in _teamEth.
+To get _affCode from an affiliate name, use FSBook.pIDxName_ function from FSBook contract.
+
+
+Pause game
+----------
+
+Only owner can pause and unpause a game.
+Once a game is paused, it won't accept new keys until it's unpaused.
+
+pauseGame(uint256 _gameID, bool _paused)
+
+ _gameID: game ID
+ _paused: true to pause game, false to unpause game
+
+
+Settle game
+-----------
+
+Only owner can settle a game.
+Once a game is settled, all players with investment in the winning team can withdraw their instant pot and final pot before withdraw deadline.
+No further investment can be made in this game after it's settled.
+
+settleGame(uint256 _gameID, uint256 _team, string _comment, uint256 _deadline)
+
+ _gameID: game ID
+ _team: the ID of winning team
+ _comment: end comment (e.g. "COLTS 5 - GIANTS 12")
+ _deadline: timestamp of the withdraw deadline, must be more than 86400 seconds later
+
+
+Cancel game
+-----------
+
+Only owner can cancel a game.
+Once a game is canceled, all players can withdraw 95% of all their investments before withdraw deadline.
+No further investment can be made in this game after it's canceled.
+
+cancelGame(uint256 _gameID, string _comment, uint256 _deadline)
+
+ _gameID: game ID
+ _comment: end comment (e.g. "GAME CANCELED DUE TO WEATHER")
+ _deadline: timestamp of the withdraw deadline, must be more than 86400 seconds later
+
+
+Withdraw fund
+-------------
+
+Player can withdraw fund after a game is settled or canceled.
+
+withdraw(uint256 _gameID)
+
+
+Clear fund
+----------
+
+Only owner can clear fund from a game.
+Once the withdraw deadline is passed, all remaining fund in a game can be cleared to the community pot.
+
+clearFund(uint256 _gameID)
+
+
+Get current key prices
+----------------------
+
+Get current price for a number of keys.
+
+getBuyPrice(uint256 _gameID, uint256 _team, uint256 _keys) returns (uint256)
+
+ _gameID: game ID
+ _team: ID of the team
+ _keys: number of keys
+
+Returns:
+ - uint256 eth: amount of ETH needed to buy the keys
+
+
+Get total price for a number of keys for a number of teams.
+
+getBuyPrices(uint256 _gameID, uint256[] _keys) returns (uint256, uint256[])
+
+ _gameID: game ID
+ _keys: array of the number of keys for each team, must be the same size as the number of teams
+
+Returns:
+ - uint256 totalEth: amount of total ETH needed to buy the keys
+ - uint256[] eth: amount of the ETH needed to buy the keys for each team
+
+
+Get number of keys can be bought
+--------------------------------
+
+Get current number of keys can be bought with ETH.
+
+getKeysFromETH(uint256 _gameID, uint256 _team, uint256 _eth) returns (uint256)
+
+ _gameID: game ID
+ _team: ID of the team
+ _eth: amount of ETH to buy keys
+ 
+Returns:
+ - uint256 keys: number of keys (in wei) can be bought with ETH
+ 
+ 
+Get total keys can be bought with ETH for a number of teams.
+
+getKeysFromETHs(uint256 _gameID, uint256[] memory _eths) returns (uint256, uint256[])
+
+ _gameID: game ID
+ _eths: array of the amount of ETH for each team, must be the same size as the number of teams
+ 
+Returns:
+ - uint256 totalKeys: total number of keys can be bought with the ETH
+ - uint256[] keys: numbers of keys can be bought for each team
+
+
+EVENTS
+------
+
+onGameCreated
+-------------
+emitted when creating a game.
+
+ - uint256 gameID: game ID of the newly created game
+ - uint256 timestamp: timestamp of the creation time
+
+
+onGameActivated
+---------------
+emitted when activating a game.
+
+ - uint256 gameID: game ID of the activated game
+ - uint256 startTime: timestamp of the game start time
+ - uint256 timestamp: timestamp of the activation time
+
+
+onGamePaused
+------------
+emitted when pausing/unpausing a game.
+
+ - uint256 gameID: game ID of the game paused/unpaused
+ - bool paused: new status of the game
+ - uint256 timestamp: timestamp of the pausing/unpausing time
+
+
+onChangeCloseTime
+-----------------
+emitted when betting close time is changed.
+
+ - uint256 gameID: game ID of the game
+ - uint256 closeTimestamp: timestamp of betting close time
+ - uint256 timestamp: timestamp of the event
+
+
+onPurchase
+----------
+emitted when someone invested in a team.
+multiple events will be emitted if a purchase involves multiple teams
+
+ - uint256 gameID: game ID
+ - uint256 playerID: player ID
+ - uint256 playerAddress: player address
+ - bytes32 playerName: name of the player if available (0x0 otherwise)
+ - uint256 teamID: team ID of the invested team
+ - uint256 ethIn: ETH invested in the team
+ - uint256 keysBought: keys bought for the team
+ - uint256 affID: affiliate ID used in the purchase
+ - uint256 timestamp: timestamp of the purchase
+
+
+onComment
+---------
+emitted when someone made a comment.
+
+ - uint256 gameID: game ID
+ - uint256 playerID: player ID
+ - address playerAddress: player address
+ - bytes32 playerName: name of the player if available (0x0 otherwise)
+ - uint256 ethIn: ETH invested when making the comment
+ - string comment: comment
+ - uint256 timestamp: timestamp of the purchase
+
+
+onWithdraw
+----------
+emitted when someone withdraw money.
+
+ - uint256 gameID: game ID
+ - uint256 playerID: player ID
+ - address playerAddress: player address
+ - bytes32 playerName: name of the player if available (0x0 otherwise)
+ - uint256 ethOut: ETH withdrawn
+ - uint256 timestamp: timestamp of the withdraw
+
+
+onGameEnded
+-----------
+emitted when game ended.
+
+ - uint256 gameID: game ID
+ - uint256 winningTEamID: team ID of the winning team
+ - string comment: end comment
+ - uint256 timestamp: timestamp when the game ended
+
+
+onGameCancelled
+---------------
+emitted when game cancelled.
+
+ - uint256 gameID: game ID
+ - string comment: end comment
+ - uint256 timestamp: timestamp when the game cancelled
+
+
+ onFundCleared
+ -------------
+ emitted when clearing game fund.
+
+  - uint256 gameID: game ID
+  - uint256 amount: amount of the fund cleared
+  - uint256 timestamp: timestamp when clearing fund
