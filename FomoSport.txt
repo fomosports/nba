@@ -23,20 +23,13 @@ Call "createGame" function to create a new game.
 Parameters:
 
  - string _name: Name of the new game
+ - uint256 _startTime: timestamp of the start time of the game (in seconds)
+ - uint256 _playTime: timestamp of the actual playing time of the game (in seconds) 
  - bytes32[] _teamNames: Names of the teams
 
 The _teamNames array should have the size the same as the number of all teams.
 The function returns gameID of the newly created game.
 Also a "onGameCreated" event is emitted.
-
-After creating a game, it needs to be activated.
-
-Call "activate" function to activate a game.
-
-Parameters:
-
- - uint256 _gameID: gameID of the game to be activated
- - uint256 _startTime: timestamp of the start time of the game (in seconds)
 
 
 CONTRACT STATUS
@@ -57,7 +50,7 @@ game_(uint256 _gameID) returns Game
 Game:
  0: string name - name of the game
  1: uint256 numberOfTeams - number of teams
- 2: uint256 gameStartTime - timestamp of the start time of the game. if 0, the game is not activated yet.
+ 2: uint256 gameStartTime - timestamp of the start time of the game.
  3: bool paused - true if the game is currently paused (can't buy key now), false if not
  4: bool ended - true if the game is ended (settled or canceled), false if not
  5: bool canceled - true if the game is canceled
@@ -65,6 +58,7 @@ Game:
  7: uint256 withdrawDeadline - timestamp of the withdraw deadline, only valid if the game is ended
  8: uint256 gameEndComment - ending comment of a game (assigned when settling or canceling a game)
  9: uint256 closeTime - timestamp of planned betting close time, 0 if no closing time
+
 
 Get game status
 ---------------
@@ -253,60 +247,6 @@ Once the withdraw deadline is passed, all remaining fund in a game can be cleare
 clearFund(uint256 _gameID)
 
 
-Get current key prices
-----------------------
-
-Get current price for a number of keys.
-
-getBuyPrice(uint256 _gameID, uint256 _team, uint256 _keys) returns (uint256)
-
- _gameID: game ID
- _team: ID of the team
- _keys: number of keys
-
-Returns:
- - uint256 eth: amount of ETH needed to buy the keys
-
-
-Get total price for a number of keys for a number of teams.
-
-getBuyPrices(uint256 _gameID, uint256[] _keys) returns (uint256, uint256[])
-
- _gameID: game ID
- _keys: array of the number of keys for each team, must be the same size as the number of teams
-
-Returns:
- - uint256 totalEth: amount of total ETH needed to buy the keys
- - uint256[] eth: amount of the ETH needed to buy the keys for each team
-
-
-Get number of keys can be bought
---------------------------------
-
-Get current number of keys can be bought with ETH.
-
-getKeysFromETH(uint256 _gameID, uint256 _team, uint256 _eth) returns (uint256)
-
- _gameID: game ID
- _team: ID of the team
- _eth: amount of ETH to buy keys
- 
-Returns:
- - uint256 keys: number of keys (in wei) can be bought with ETH
- 
- 
-Get total keys can be bought with ETH for a number of teams.
-
-getKeysFromETHs(uint256 _gameID, uint256[] memory _eths) returns (uint256, uint256[])
-
- _gameID: game ID
- _eths: array of the amount of ETH for each team, must be the same size as the number of teams
- 
-Returns:
- - uint256 totalKeys: total number of keys can be bought with the ETH
- - uint256[] keys: numbers of keys can be bought for each team
-
-
 EVENTS
 ------
 
@@ -315,16 +255,9 @@ onGameCreated
 emitted when creating a game.
 
  - uint256 gameID: game ID of the newly created game
+ - uint256 startTime: betting start time of the game
+ - uint256 playTime: play start time of the game (actual game playing time)
  - uint256 timestamp: timestamp of the creation time
-
-
-onGameActivated
----------------
-emitted when activating a game.
-
- - uint256 gameID: game ID of the activated game
- - uint256 startTime: timestamp of the game start time
- - uint256 timestamp: timestamp of the activation time
 
 
 onGamePaused
