@@ -1,0 +1,246 @@
+FSBook Smart Contract Document
+------------------------------
+
+
+SET UP
+------
+
+Take these procedures to set up a FSBook contract:
+
+1. Check "TODO: Check address" in FSBook.sol to make sure all contract addresses are correct.
+2. Check registrationFee_ and affiliateFee_.
+3. Deploy FSBook contract.
+
+
+REGISTER GAME
+-------------
+
+A game needed to be registered with FSBook in order to use FSBook's services.
+Only addresses in onlyDevs() modifier can register a game.
+
+To register a game, call function:
+
+registerGame(address _contract, bool _enable)
+
+ _contract: contract address to be registered
+ _enable: true to enable this game, false to disable
+
+
+CONTRACT STATUS
+---------------
+
+
+Registration fee
+----------------
+registrationFee_() returns(uint256)
+
+Returns fee for buying a name.
+
+
+Affiliate fee
+-------------
+affiliateFee_() returns(uint256)
+
+Returns fee for buying affiliate.
+
+
+Number of players
+-----------------
+pID_() returns(uint256)
+
+Returns the total number of players.
+
+
+Player ID from address
+----------------------
+pIDxAddr_(address _address) returns(uint256)
+
+Returns player ID of the address.
+Returns 0 if the address is new.
+
+
+Player ID from name
+-------------------
+pIDxName_(bytes32 _name) returns(uint256)
+
+Returns player ID of the player name.
+Returns 0 if the name is not in the contract.
+
+
+Player data
+-----------
+plyr_(uint256 _pID) returns (Player)
+
+Returns Player data from player ID.
+
+Player:
+ 0: address addr - player address
+ 1: bytes32 name - current player name
+ 2: bool hasAff - true if the player has bought affiliate
+ 3: uint256 aff - total ETH earned from affiliate
+ 4: uint256 withdrawnAff: - total ETH withdrawn 
+ 5: uint256 laff - last affiliate ID used
+ 6: uint256 affT2 - affiliate ID used when registering a name
+ 7: uint256 names - number of names owned by this player
+
+
+Player Names
+------------
+plyrNames_(uint256 _pID, bytes32 _name) returns (bool)
+
+Returns if the name is owned by the player.
+
+
+Player Name List
+----------------
+plyrNameList_(uint256 _pID, uint256 _index) returns (bytes32)
+
+Returns names owned by the player.
+
+
+Registered games
+----------------
+registeredGames_(address _contract) returns (bool)
+
+Returns if the contract is registered and enabled.
+
+
+Check if name is valid and available 
+------------------------------------
+checkIfNameValid(string _nameStr) returns (bool)
+
+Returns true if the name is valid and available.
+
+
+Register name
+-------------
+registerNameXID(string _nameString, uint256 _affCode)
+
+Register a name using the affiliate code.
+
+
+registerNameXaddr(string _nameString, address _affCode)
+
+Register a name using the affiliate address.
+
+
+registerNameXname(string _nameString, bytes32 _affCode)
+
+register a name using the affiliate name.
+
+
+Register as an affiliate
+------------------------
+registerAffiliate()
+
+Register as an affiliate (need to send enough ETH along).
+
+
+Register game
+-------------
+registerGame(address _contract, bool _enable)
+
+Register or disable a game of the contract address. 
+Only address in onlyDevs() modifier can call this function.
+
+
+Use old name
+------------
+useMyOldName(string _nameString)
+
+Switch to a previously purchased name.
+
+
+Withdraw money
+--------------
+withdraw()
+
+Withdraw all affiliate earnings.
+
+
+Get player name
+---------------
+getPlayerName(uint256 _pID) returns (bytes32)
+
+Returns current name of the player.
+
+
+Get player address
+------------------
+getPlayerAddr(uint256 _pID) returns (address)
+
+Returns wallet address of the player.
+
+
+Set registration fee
+--------------------
+setRegistrationFee(uint256 _fee)
+
+Set registration fee. Only address in onlyDevs() can call this function.
+
+
+Set affiliate fee
+-----------------
+setAffiliateFee(uint256 _fee)
+
+Set affiliate fee. Only address in onlyDevs() can call this function.
+
+
+
+EVENTS
+------
+
+onNewName
+---------
+emitted when someone buys a new name.
+
+ - uint256 playerID: player ID
+ - address playerAddress: player address
+ - bytes32 playerName: the newly purchased name
+ - bool isNewPlayer: true if the player is a first time buyer
+ - uint256 affiliateID: affiliate ID used by this purchase
+ - uint256 affiliateAddress: affiliate address used by this purchase
+ - bytes32 affiliateName: affiliate name used by this purchase
+ - uint256 amountPaid: ETH paid to buy this name
+ - uint256 timestamp: timestamp of the purchase
+
+
+onNewAffiliate
+--------------
+emitted when someone buys an affiliate
+
+ - uint256 playerID: player ID
+ - address playerAddress: player address
+ - bytes32 playerName: player name
+ - uint256 amountPaid: ETH paid to buy this affiliate
+ - uint256 timestamp: timestamp of the purchase
+
+
+onUseOldName
+------------
+emitted when someone used an old name.
+
+ - uint256 playerID: player ID
+ - address playerAddress: player address
+ - bytes32 playerName: player name
+ - uint256 timestamp: timestamp
+
+
+onGameRegistered
+----------------
+emitted when a game is registered.
+
+ - address gameAddress: address of the game
+ - bool enabled: register or deregister the game
+ - uint256 timestamp: timestamp
+
+
+onWithdraw
+----------
+emitted when someone withdraw funds.
+
+ - uint256 playerID: player ID
+ - address playerAddress: player address
+ - bytes32 playerName: player name
+ - uint256 amount: amount of fund withdrawn
+ - uint256 timestamp: timestamp
